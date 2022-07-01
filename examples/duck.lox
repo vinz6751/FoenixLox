@@ -1,0 +1,15 @@
+class Duck {
+    init(name) {
+        this.name = name;
+    }
+
+    quak() {
+        println this.name + " quak quak";
+    }
+}
+
+var donald = Duck("Donald");
+var daisy = Duck("Daisy");
+
+donald.quak();
+daisy.quak();

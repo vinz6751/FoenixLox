@@ -1,0 +1,243 @@
+
+var nScreenWidth = 80;			// Console Screen Size X (columns)
+var nScreenHeight = 30;			// Console Screen Size Y (rows)
+var nFieldWidth = 12;
+var nFieldHeight = 18;
+
+// Tetronimos 4x4
+var tetromino = [ 
+    "..X...X...X...X.",
+    "..X..XX...X.....",
+    ".....XX..XX.....",
+    "..X..XX..X......",
+    ".X...XX...X.....",
+    ".X...X...XX.....",
+    "..X...X..XX....."
+];
+
+var screen = [];
+var pField = [];
+
+
+fun Rotate(px, py, r)
+{
+	var pi = 0;
+    var rr = r % 4;
+
+    if (rr == 0) {
+        // 0 degrees
+		pi = py * 4 + px;
+    } else if (rr == 1) {
+        // 90 degrees
+		pi = 12 + py - (px * 4);		
+    } else if (rr == 2) {
+        // 180 degrees
+		pi = 15 - (py * 4) - px;
+    } else if (rr == 3) {
+        // 270 degrees
+		pi = 3 - py + (px * 4);
+	}
+
+	return pi;
+}
+
+fun DoesPieceFit(nTetromino, nRotation, nPosX, nPosY)
+{
+	// All Field cells >0 are occupied
+	for (var px = 0; px < 4; px = px + 1)
+		for (var py = 0; py < 4; py = py + 1)
+		{
+			// Get index into piece
+			var pi = Rotate(px, py, nRotation);
+
+			// Get index into field
+			var fi = (nPosY + py) * nFieldWidth + (nPosX + px);
+
+			// Check that test is in bounds. Note out of bounds does
+			// not necessarily mean a fail, as the long vertical piece
+			// can have cells that lie outside the boundary, so we'll
+			// just ignore them
+			if (nPosX + px >= 0 and nPosX + px < nFieldWidth)
+			{
+				if (nPosY + py >= 0 and nPosY + py < nFieldHeight)
+				{
+					// In Bounds so do collision check
+					if (tetromino[nTetromino][pi] != '.' and pField[fi] != 0)
+						return false; // fail on first hit
+				}
+			}
+		}
+
+	return true;
+}
+
+fun RenderScreen() {
+	cls();
+	for (var x = 0; x < nScreenWidth; x = x + 1) {
+		for (var y = 0; y < nScreenHeight; y = y + 1) {
+			print screen[y][x];
+		}
+		println "";
+	}
+}
+
+fun main()
+{
+	// Populate Screen Buffer
+	for (var i = 0; i < nScreenWidth*nScreenHeight; i = i + 1) push(screen, ' ');	
+
+    // Populate pField buffer
+	for (var i = 0; i < nFieldWidth*nFieldHeight; i = i + 1) push(pField, 0);
+	for (var x = 0; x < nFieldWidth; x = x + 1) { // Board Boundary
+		for (var y = 0; y < nFieldHeight; y = y + 1) {
+			if (x == 0 or x == nFieldWidth - 1 or y == nFieldHeight - 1) {
+				pField[y*nFieldWidth + x] = 9;	
+			} else {
+				pField[y*nFieldWidth + x] = 0;
+			}
+		}
+	}
+
+	// Game Logic
+	var bKey = [false, false, false, false];
+	var nCurrentPiece = 0;
+	var nCurrentRotation = 0;
+	var nCurrentX = nFieldWidth / 2;
+	var nCurrentY = 0;
+	var nSpeed = 20;
+	var nSpeedCount = 0;
+	var bForceDown = false;
+	var bRotateHold = true;
+	var nPieceCount = 0;
+	var nScore = 0;
+	var vLines = [];
+	var bGameOver = false;
+
+	while (!bGameOver) // Main Loop
+	{
+		// Timing =======================
+		sleep(3); // Small Step = 1 Game Tick
+		nSpeedCount = nSpeedCount + 1;
+		bForceDown = (nSpeedCount == nSpeed);
+
+		// Input ========================
+		// for (var k = 0; k < 4; k=k+1)								// R   L   D Z
+		// 	bKey[k] = (0x8000 & GetAsyncKeyState((unsigned char)("\x27\x25\x28Z"[k]))) != 0;
+		
+		// Game Logic ===================
+
+		// Handle player movement
+		if (bKey[0] and DoesPieceFit(nCurrentPiece, nCurrentRotation, nCurrentX + 1, nCurrentY))
+			nCurrentX = nCurrentX + 1;
+		if (bKey[1] and DoesPieceFit(nCurrentPiece, nCurrentRotation, nCurrentX - 1, nCurrentY))
+			nCurrentX = nCurrentX - 1;
+		if (bKey[2] and DoesPieceFit(nCurrentPiece, nCurrentRotation, nCurrentX, nCurrentY + 1))
+			nCurrentY = nCurrentY + 1;
+
+		// Rotate, but latch to stop wild spinning
+		if (bKey[3])
+		{
+			if (bRotateHold and DoesPieceFit(nCurrentPiece, nCurrentRotation + 1, nCurrentX, nCurrentY))
+				nCurrentRotation = nCurrentRotation + 1;
+			bRotateHold = false;
+		}
+		else
+			bRotateHold = true;
+
+		// Force the piece down the playfield if it's time
+		if (bForceDown)
+		{
+			// Update difficulty every 50 pieces
+			nSpeedCount = 0;
+			nPieceCount = nPieceCount + 1;
+			if (nPieceCount % 50 == 0)
+				if (nSpeed >= 10) nSpeed=nSpeed-1;
+			
+			// Test if piece can be moved down
+			if (DoesPieceFit(nCurrentPiece, nCurrentRotation, nCurrentX, nCurrentY + 1))
+				nCurrentY = nCurrentY + 1; // It can, so do it!
+			else
+			{
+				// It can't! Lock the piece in place
+				for (var px = 0; px < 4; px=px+1)
+					for (var py = 0; py < 4; py=py+1)
+						if (tetromino[nCurrentPiece][Rotate(px, py, nCurrentRotation)] != '.')
+							pField[(nCurrentY + py) * nFieldWidth + (nCurrentX + px)] = nCurrentPiece + 1;
+
+				// Check for lines
+				for (var py = 0; py < 4; py=py+1)
+					if(nCurrentY + py < nFieldHeight - 1)
+					{
+						bool bLine = true;
+						for (var px = 1; px < nFieldWidth - 1; px=px+1)
+							bLine = bLine and ((pField[(nCurrentY + py) * nFieldWidth + px]) != 0);
+
+						if (bLine)
+						{
+							// Remove Line, set to =
+							for (var px = 1; px < nFieldWidth - 1; px=px+1)
+								pField[(nCurrentY + py) * nFieldWidth + px] = 8;
+							push(vLines, nCurrentY + py);
+						}						
+					}
+
+				nScore = nScore + 25;
+				if(len(vLines) > 0)	nScore = nScore + (1 << len(vLines)) * 100;
+
+				// Pick New Piece
+				nCurrentX = nFieldWidth / 2;
+				nCurrentY = 0;
+				nCurrentRotation = 0;
+				nCurrentPiece = rand() % 7;
+
+				// If piece does not fit straight away, game over!
+				bGameOver = !DoesPieceFit(nCurrentPiece, nCurrentRotation, nCurrentX, nCurrentY);
+			}
+		}
+
+		// Display ======================
+
+		// Draw Field
+		for (var x = 0; x < nFieldWidth; x = x + 1)
+			for (var y = 0; y < nFieldHeight; y = y + 1)
+				screen[(y + 2)*nScreenWidth + (x + 2)] = " ABCDEFG=#"[pField[y*nFieldWidth + x]];
+
+		// Draw Current Piece
+		for (var px = 0; px < 4; px=px+1)
+			for (var py = 0; py < 4; py=py+1)
+				if (tetromino[nCurrentPiece][Rotate(px, py, nCurrentRotation)] != '.')
+					screen[(nCurrentY + py + 2)*nScreenWidth + (nCurrentX + px + 2)] = nCurrentPiece + 65;
+
+		// Draw Score
+		// swprintf_s(&screen[2 * nScreenWidth + nFieldWidth + 6], 16, "SCORE: %8d", nScore);
+
+		// Animate Line Completion
+		if (len(vLines) > 0)
+		{
+			// Display Frame (cheekily to draw lines)
+			RenderScreen();
+			sleep(25); // Delay a bit
+
+			for (var i = 0; i < len(vLines); i = i + 1) {
+				var v = vLines[i];
+				for (var px = 1; px < nFieldWidth - 1; px=px+1)
+				{
+					for (var py = v; py > 0; py=py-1)
+						pField[py * nFieldWidth + px] = pField[(py - 1) * nFieldWidth + px];
+					pField[px] = 0;
+				}
+			}
+
+			clear(vLines);
+		}
+
+		// Display Frame
+		RenderScreen();
+	}
+
+	// Oh Dear
+	print "Game Over!! Score: ";
+	println nScore;
+}
+
+main(); 

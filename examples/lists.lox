@@ -1,0 +1,17 @@
+fun map(a,fn) {
+    var result = [];
+    for (var i=0; i<len(a); i=i+1) {
+        push(result, fn(a[i]));
+    }
+    return result;
+}
+
+fun square(n) {
+    return n * n;
+}
+
+var arr = [1, 2, 3, 4, 5];
+var res = map(arr, square);
+
+println arr;
+println res;
