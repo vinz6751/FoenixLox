@@ -342,7 +342,7 @@ Value readCharNative(int argCount, Value* args) {
 
 Value readLineNative(int argCount, Value* args) {
     char buffer[255];
-    short len = sys_chan_read(0, (unsigned char *)buffer, 255);
+    short len = sys_chan_readline(0, (unsigned char *)buffer, 255);
     if (len > 0) {
         return OBJ_VAL(copyString(buffer, len));
     } else {
