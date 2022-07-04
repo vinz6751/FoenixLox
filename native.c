@@ -17,7 +17,8 @@ Value sleepNative(int argc, Value* args) {
     }
     int delay = AS_NUMBER(args[0]);
     long end = sys_time_jiffies() + delay;
-    while(sys_time_jiffies() < end);    
+    while(sys_time_jiffies() < end);
+    return NIL_VAL;
 }
 
 // Casting
@@ -105,6 +106,7 @@ Value clearNative(int argCount, Value* args) {
         list->items[i] = NIL_VAL;
     }
     list->count = 0;
+    return NIL_VAL;
 }
 
 Value clsNative(int argCount, Value* args) {
@@ -323,4 +325,27 @@ Value tanhNative(int argCount, Value* args) {
 
 Value randNative(int argCount, Value* args) {
     return NUMBER_VAL(rand());
+}
+
+Value joystickNative(int argCount, Value* args) {
+    volatile unsigned int * joystick_port = (volatile unsigned int *)0xFEC00500;
+    volatile unsigned int * game_ctrl_port = (volatile unsigned int *)0xFEC00504;
+    unsigned int joy_state = 0;
+    *game_ctrl_port = 0;
+    joy_state = *joystick_port;
+    return NUMBER_VAL(joy_state);
+}
+
+Value readCharNative(int argCount, Value* args) {
+    return NUMBER_VAL(sys_chan_read_b(0));
+}
+
+Value readLineNative(int argCount, Value* args) {
+    char buffer[255];
+    short len = sys_chan_read(0, (unsigned char *)buffer, 255);
+    if (len > 0) {
+        return OBJ_VAL(copyString(buffer, len));
+    } else {
+        return NIL_VAL;
+    }
 }

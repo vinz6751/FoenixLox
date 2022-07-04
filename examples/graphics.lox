@@ -1,0 +1,58 @@
+var c = Canvas(mode)
+
+var img = Assets.load("drawinging.png")
+
+c.drawText("Some Text");
+c.drawImage(img, 0, 0)
+c.present()
+
+
+Tile.draw(c)
+
+class Game {
+    init(canvas) {
+        _canvas = canvas;
+    }
+
+    update(delta) {
+
+    }
+
+    draw(canvas) {
+
+    }
+
+    run() {
+        var lastTicks = ticks();
+        var running = true;
+        while(running) {
+            var currentTicks = ticks();
+            running = update(lastTicks - currentTicks);
+            draw(_canvas);
+            _canvas.present();
+            lastTicks = currentTicks;
+        }
+    }
+}
+
+class MyGame < Game {
+    init() {
+        var canvas = Canvas(mode);
+        super.init(canvas);
+        _player = Image("myimagefile.raw");
+    }
+
+    update(d) {
+        if (key_left) {
+            _player.move(-1,0);
+        }
+    }
+
+    draw(c) {
+        _player.draw(c);
+    }
+}
+
+g = MyGame()
+g.run()
+

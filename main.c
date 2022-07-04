@@ -90,7 +90,11 @@ int main(int argc, const char* argv[]) {
 
   srand(sys_time_jiffies());
 
-  if (argc == 1) {
+  const char *edit_filename = sys_var_get("edit_filename");
+
+  if (strlen(edit_filename) > 0) {
+    runFile(edit_filename);
+  } else if (argc == 1) {
     repl();
   } else if (argc == 2) {
     runFile(argv[1]);

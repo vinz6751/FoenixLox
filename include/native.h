@@ -5,6 +5,9 @@
 
 Value ticksNative(int argc, Value* args);
 Value sleepNative(int argc, Value* args);
+Value joystickNative(int argCount, Value* args);
+Value readCharNative(int argCount, Value* args);
+Value readLineNative(int argCount, Value* args);
 
 // Casting
 Value strNative(int argCount, Value* args);

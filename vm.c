@@ -69,6 +69,9 @@ void initVM() {
   defineNative("ticks", ticksNative);
   defineNative("sleep", sleepNative);
   defineNative("cls", clsNative);
+  defineNative("joystick", joystickNative);
+  defineNative("readChar", readCharNative);
+  defineNative("readLine", readLineNative);
 
   defineNative("str", strNative);
   defineNative("num", numNative);
