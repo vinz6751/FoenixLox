@@ -42,6 +42,10 @@
 *.i*86
 *.x86_64
 *.hex
+*.tos
+*.prg
+*.pgz
+*.pgx
 
 # Debug files
 *.dSYM/

@@ -2,21 +2,27 @@ FOENIX = module/Calypsi-m68k-Foenix
 
 BUILD_VER = 0.2.0 ($(shell git branch --show-current), $(shell date +"%b %d %Y %H:%M"))
 
-# Select toolchain. Valid values are gcc or calypsi
-TOOLCHAIN=gcc
+# Select target. Valid values are mcp or emutos
+OS_TARGET=mcp
 
 # GCC toolchain for EmuTOS
-ifeq ($(TOOLCHAIN),gcc)
+ifeq ($(OS_TARGET),emutos)
+TARGET=TARGET_EMUTOS
 PREFIX=m68k-atari-mint-
 AS=$(PREFIX)as
 CC=$(PREFIX)gcc
 CFLAGS=-c -O2 -fomit-frame-pointer -std=c99 -Wall
 LD=$(PREFIX)gcc
 LDFLAGS=-lm
+STRIP=$(PREFIX)gcc
+#Tried using LIBCMINI but it lacks math functions
+#LIBCMINI=/home/vincent/Atari/Crossdev/libcmini
+#LDFLAGS=-L$(LIBCMINI)/build -lcmini -lgcc -lm
 endif
 
 # Calypsi toolchain for MCP
-ifeq ($(TOOLCHAIN),calypsi)
+ifeq ($(OS_TARGET),mcp)
+TARGET=TARGET_MCP
 MODEL=--code-model=large --data-model=large
 LIB_MODEL=lc-ld
 FOENIX_LIB = lib/foenix-$(LIB_MODEL).a
@@ -30,18 +36,28 @@ LDFLAGS=$(A2560K_RULES) clib-68000-$(LIB_MODEL).a $(FOENIX_LIB) --list-file=lox.
 endif
 
 # Common flags
-CFLAGS+=-Iinclude -DBUILD_VER="\"$(BUILD_VER)\""
+CFLAGS+=-Iinclude -DBUILD_VER="\"$(BUILD_VER)\"" -D$(TARGET)
 
 # Common source files
 ASM_SRCS =
 C_SRCS = chunk.c debug.c memory.c scanner.c value.c native.c \
-         compiler.c main.c object.c table.c vm.c line_edit.c
- 
+         compiler.c main.c object.c table.c vm.c
+ifeq ($(OS_TARGET),mcp)
+C_SRCS+=line_edit.c
+endif
+
 # Object files
 OBJS = $(ASM_SRCS:%.s=obj/%.o) $(C_SRCS:%.c=obj/%.o)
 OBJS_DEBUG = $(ASM_SRCS:%.s=obj/%-debug.o) $(C_SRCS:%.c=obj/%-debug.o)
 
-all: lox.prg
+ifeq ($(OS_TARGET),mcp)
+EXEC=lox.pgz lox.elf
+endif
+ifeq ($(OS_TARGET),emutos)
+EXEC=lox.tos
+endif
+
+all: $(EXEC)
 
 obj/%.o: %.s
 	$(AS) $(ASFLAGS) -o $@ $<
@@ -56,8 +72,11 @@ obj/%-debug.o: %.c
 	$(CC) $(CFLAGS) -o $@ $<
 
 # GCC targets
-lox.prg:  $(OBJS)
-	$(LD) -o $@ $^ $(LDFLAGS)
+lox.tos:  $(OBJS)
+	$(CC) -o $@ $^ $(LDFLAGS)
+#	$(LD) -o $@ -nostdlib $(LIBCMINI)/build/crt0.o $^ -s $(LDFLAGS)
+#	$(STRIP) $@
+	cp $@ /cygdrive/c/Atari/Disques/F_Coding/$@
 
 # Calypsi targets
 lox.pgz:  $(OBJS)
@@ -68,4 +87,4 @@ lox.elf:  $(OBJS)
 
 clean:
 	-$(RM) $(OBJS) $(OBJS:%.o=%.lst) $(OBJS_DEBUG) $(OBJS_DEBUG:%.o=%.lst)
-	-$(RM) lox.pgz lox.elf lox.lst 
+	-$(RM) $(EXEC) lox.lst 

@@ -2,13 +2,30 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+
+#ifdef TARGET_EMUTOS
+#include <mint/ostruct.h>
+#include <osbind.h>
+#elif defined (TARGET_MCP)
 #include "mcp/syscalls.h"
+#endif
+
 #include "value.h"
 #include "object.h"
 #include "native.h"
 
+#ifdef TARGET_EMUTOS
+#elif defined (TARGET_MCP)
+#endif
+
+#define _hz_200 ((volatile unsigned long*const)0x4ba)
+
 Value ticksNative(int argc, Value* args) {
+#ifdef TARGET_EMUTOS
+    return NUMBER_VAL(*_hz_200);
+#elif defined (TARGET_MCP)
     return NUMBER_VAL(sys_time_jiffies());
+#endif
 }
 
 Value sleepNative(int argc, Value* args) {
@@ -16,8 +33,15 @@ Value sleepNative(int argc, Value* args) {
         //error
     }
     int delay = AS_NUMBER(args[0]);
+
+#ifdef TARGET_EMUTOS
+    unsigned long end = *_hz_200 + delay;
+    while(*_hz_200 < end);
+#elif defined (TARGET_MCP)
     long end = sys_time_jiffies() + delay;
     while(sys_time_jiffies() < end);
+#endif
+
     return NIL_VAL;
 }
 
@@ -43,14 +67,16 @@ Value strNative(int argCount, Value* args) {
         case VAL_OBJ: {
             return OBJ_VAL(copyString("<object>", 3));
         }
+        default:
+            return NIL_VAL; // TODO really ?
     }
 }
 
 Value numNative(int argCount, Value* args) {
     char *str = AS_CSTRING(args[0]);
-    double num = 0;
+    float num = 0;
     sscanf(str, "%g", &num);
-    return NUMBER_VAL(num);
+    return NUMBER_VAL((double)num);
 }
 
 // List
@@ -110,8 +136,13 @@ Value clearNative(int argCount, Value* args) {
 }
 
 Value clsNative(int argCount, Value* args) {
+#ifdef TARGET_EMUTOS
+    (void)Cconws("\033E");
+#elif defined (TARGET_MCP)
     char *s = "\x1B[2J\x1B[H";
     sys_chan_write(0, (unsigned char *)s, strlen(s));
+#endif
+
     return NIL_VAL;
 }
 
@@ -186,6 +217,7 @@ Value floorNative(int argCount, Value* args) {
     return NUMBER_VAL(-1); // handle error
 }
 
+#ifndef TARGET_EMUTOS
 Value roundNative(int argCount, Value* args) {
     if (argCount == 1 && IS_NUMBER(args[0])) {
         double n = AS_NUMBER(args[0]);
@@ -193,6 +225,7 @@ Value roundNative(int argCount, Value* args) {
     }
     return NUMBER_VAL(-1); // handle error
 }
+#endif
 
 Value absNative(int argCount, Value* args) {
     if (argCount == 1 && IS_NUMBER(args[0])) {
@@ -235,6 +268,7 @@ Value log10Native(int argCount, Value* args) {
     return NUMBER_VAL(-1); // handle error
 }
 
+#ifndef TARGET_EMUTOS
 Value log2Native(int argCount, Value* args) {
     if (argCount == 1 && IS_NUMBER(args[0])) {
         double n = AS_NUMBER(args[0]);
@@ -242,7 +276,7 @@ Value log2Native(int argCount, Value* args) {
     }
     return NUMBER_VAL(-1); // handle error
 }
-
+#endif
 Value sqrtNative(int argCount, Value* args) {
     if (argCount == 1 && IS_NUMBER(args[0])) {
         double n = AS_NUMBER(args[0]);
@@ -337,15 +371,28 @@ Value joystickNative(int argCount, Value* args) {
 }
 
 Value readCharNative(int argCount, Value* args) {
+#ifdef TARGET_EMUTOS
+    return NUMBER_VAL(Cnecin());
+#elif defined (TARGET_MCP)
     return NUMBER_VAL(sys_chan_read_b(0));
+#endif
 }
 
 Value readLineNative(int argCount, Value* args) {
+#ifdef TARGET_EMUTOS
+    _CCONLINE l;
+    l.maxlen = 255;
+    Cconrs(&l);
+    if (l.actuallen > 0) {
+        return OBJ_VAL(copyString(l.buffer, l.actuallen));
+#elif defined (TARGET_MCP)
     char buffer[255];
     short len = sys_chan_readline(0, (unsigned char *)buffer, 255);
     if (len > 0) {
         return OBJ_VAL(copyString(buffer, len));
-    } else {
+    }
+#endif
+    else {
         return NIL_VAL;
     }
 }
