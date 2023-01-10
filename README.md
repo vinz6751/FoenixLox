@@ -1,3 +1,6 @@
+This fork allows targeting [EmuTOS](https://emutos.sourceforge.io/) using [GCC](http://vincent.riviere.free.fr/soft/m68k-atari-mint/)
+---
+
 # FoenixLox
 
 An implementation of the Lox language as described in the book [Crafting Interpreters](https://craftinginterpreters.com) by Robert Nystrom.
