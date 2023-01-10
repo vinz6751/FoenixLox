@@ -1,6 +1,6 @@
 #include <stdlib.h>
 
-#include "compiler.h"
+#include "lox_compiler.h"
 #include "memory.h"
 #include "vm.h"
 

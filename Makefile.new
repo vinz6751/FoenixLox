@@ -1,0 +1,90 @@
+FOENIX = module/Calypsi-m68k-Foenix
+
+BUILD_VER = 0.2.0 ($(shell git branch --show-current), $(shell date +"%b %d %Y %H:%M"))
+
+# Select target. Valid values are mcp or emutos
+OS_TARGET=mcp
+
+# GCC toolchain for EmuTOS
+ifeq ($(OS_TARGET),emutos)
+TARGET=TARGET_EMUTOS
+PREFIX=m68k-atari-mint-
+AS=$(PREFIX)as
+CC=$(PREFIX)gcc
+CFLAGS=-c -O2 -fomit-frame-pointer -std=c99 -Wall
+LD=$(PREFIX)gcc
+LDFLAGS=-lm
+STRIP=$(PREFIX)gcc
+#Tried using LIBCMINI but it lacks math functions
+#LIBCMINI=/home/vincent/Atari/Crossdev/libcmini
+#LDFLAGS=-L$(LIBCMINI)/build -lcmini -lgcc -lm
+endif
+
+# Calypsi toolchain for MCP
+ifeq ($(OS_TARGET),mcp)
+TARGET=TARGET_MCP
+MODEL=--code-model=large --data-model=large
+LIB_MODEL=lc-ld
+FOENIX_LIB = lib/foenix-$(LIB_MODEL).a
+A2560K_RULES = lib/a2560k-simplified.scm
+AS=as68k
+ASFLAGS=--core=68000 $(MODEL) --debug --list-file=$(@:%.o=%.lst)
+CC=cc68k
+CFLAGS=--core=68000 $(MODEL) -DA2560=1 -DUSE_DL=0 -DNO_WCHAR=1 --debug --list-file=$(@:%.o=%.lst)
+LD=ln68k
+LDFLAGS=$(A2560K_RULES) clib-68000-$(LIB_MODEL).a $(FOENIX_LIB) --list-file=lox.lst --cross-reference --rtattr printf=float --rtattr scanf=float --rtattr cstartup=Foenix_user --stack-size=65536 --heap-size=262144
+endif
+
+# Common flags
+CFLAGS+=-Iinclude -DBUILD_VER="\"$(BUILD_VER)\"" -D$(TARGET)
+
+# Common source files
+ASM_SRCS =
+C_SRCS = chunk.c debug.c memory.c scanner.c value.c native.c \
+         compiler.c main.c object.c table.c vm.c
+ifeq ($(OS_TARGET),mcp)
+C_SRCS+=line_edit.c
+endif
+
+# Object files
+OBJS = $(ASM_SRCS:%.s=obj/%.o) $(C_SRCS:%.c=obj/%.o)
+OBJS_DEBUG = $(ASM_SRCS:%.s=obj/%-debug.o) $(C_SRCS:%.c=obj/%-debug.o)
+
+ifeq ($(OS_TARGET),mcp)
+EXEC=lox.pgz lox.elf
+endif
+ifeq ($(OS_TARGET),emutos)
+EXEC=lox.tos
+endif
+
+all: $(EXEC)
+
+obj/%.o: %.s
+	$(AS) $(ASFLAGS) -o $@ $<
+
+obj/%.o: %.c
+	$(CC) $(CFLAGS) -o $@ $<
+
+obj/%-debug.o: %.s
+	$(AS) $(ASFLAGS) -o $@ $<
+
+obj/%-debug.o: %.c
+	$(CC) $(CFLAGS) -o $@ $<
+
+# GCC targets
+lox.tos:  $(OBJS)
+	$(CC) -o $@ $^ $(LDFLAGS)
+#	$(LD) -o $@ -nostdlib $(LIBCMINI)/build/crt0.o $^ -s $(LDFLAGS)
+#	$(STRIP) $@
+	cp $@ /cygdrive/c/Atari/Disques/F_Coding/$@
+
+# Calypsi targets
+lox.pgz:  $(OBJS)
+	$(LD) -o $@ --output-format=pgz $^ $(LDFLAGS)
+
+lox.elf:  $(OBJS)
+	$(LD) -o $@ $^ $(LDFLAGS)
+
+clean:
+	-$(RM) $(OBJS) $(OBJS:%.o=%.lst) $(OBJS_DEBUG) $(OBJS_DEBUG:%.o=%.lst)
+	-$(RM) $(EXEC) lox.lst 

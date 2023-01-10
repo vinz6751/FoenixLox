@@ -3,7 +3,7 @@
 #include <string.h>
 
 #include "common.h"
-#include "compiler.h"
+#include "lox_compiler.h"
 #include "memory.h"
 #include "scanner.h"
 

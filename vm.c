@@ -4,7 +4,7 @@
 #include <time.h>
 
 #include "common.h"
-#include "compiler.h"
+#include "lox_compiler.h"
 #include "debug.h"
 #include "object.h"
 #include "memory.h"
@@ -89,13 +89,17 @@ void initVM() {
 
   defineNative("ceil", ceilNative);
   defineNative("floor", floorNative);
+#ifndef TARGET_EMUTOS
   defineNative("round", roundNative);
+#endif
   defineNative("abs", absNative);
   defineNative("pow", powNative);
   defineNative("exp", expNative);
   defineNative("log", logNative);
   defineNative("log10", log10Native);
+#ifndef TARGET_EMUTOS
   defineNative("log2", log2Native);
+#endif
   defineNative("sqrt", sqrtNative);
   defineNative("sin", sinNative);
   defineNative("cos", cosNative);

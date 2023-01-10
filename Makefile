@@ -9,7 +9,7 @@ C_SRCS = chunk.c debug.c memory.c scanner.c value.c native.c \
  
 MODEL = --code-model=large --data-model=large
 LIB_MODEL = lc-ld
-C_FLAGS = -Iinclude -DA2560=1 -DUSE_DL=0 -DNO_WCHAR=1 -DBUILD_VER="\"$(BUILD_VER)\""
+C_FLAGS = -Iinclude -DA2560=1 -DUSE_DL=0 -DNO_WCHAR=1 -DBUILD_VER="\"$(BUILD_VER)\"" -DTARGET_MCP
 
 FOENIX_LIB = lib/foenix-$(LIB_MODEL).a
 A2560K_RULES = lib/a2560k-simplified.scm
