@@ -5,7 +5,8 @@ BUILD_VER = 0.2.0 ($(shell git branch --show-current), $(shell date +"%b %d %Y %
 # Common source files
 ASM_SRCS =
 C_SRCS = chunk.c debug.c memory.c scanner.c value.c native.c \
-         compiler.c main.c object.c table.c vm.c line_edit.c
+         compiler.c main.c object.c table.c vm.c line_edit.c \
+		 string_output.c
  
 MODEL = --code-model=large --data-model=large
 LIB_MODEL = lc-ld

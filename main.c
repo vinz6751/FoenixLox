@@ -14,6 +14,7 @@
 #include "common.h"
 #include "chunk.h"
 #include "debug.h"
+#include "string_output.h"
 #include "vm.h"
 
 static void repl() {
@@ -21,7 +22,7 @@ static void repl() {
   sys_chan_ioctrl(0, 0x03, 0, 0);
 #endif
   for (;;) {
-    printf("> ");fflush(stdout);
+    print_cstring("> ");
 
   short rc;
 #ifdef TARGET_MCP
@@ -46,7 +47,7 @@ static void repl() {
         // ctrl-c
         break;
       default:
-        printf("\n");fflush(stdout);
+        print_cstring(CRLF);
         if (strlen(line) == 0)
           continue;
         if (strcmp(line, "exit") == 0) {
