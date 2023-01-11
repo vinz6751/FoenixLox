@@ -3,7 +3,7 @@ FOENIX = module/Calypsi-m68k-Foenix
 BUILD_VER = 0.2.0 ($(shell git branch --show-current), $(shell date +"%b %d %Y %H:%M"))
 
 # Select target. Valid values are mcp or emutos
-OS_TARGET=mcp
+OS_TARGET=emutos
 
 # GCC toolchain for EmuTOS
 ifeq ($(OS_TARGET),emutos)
@@ -41,7 +41,8 @@ CFLAGS+=-Iinclude -DBUILD_VER="\"$(BUILD_VER)\"" -D$(TARGET)
 # Common source files
 ASM_SRCS =
 C_SRCS = chunk.c debug.c memory.c scanner.c value.c native.c \
-         compiler.c main.c object.c table.c vm.c
+         compiler.c main.c object.c table.c vm.c string_output.c
+
 ifeq ($(OS_TARGET),mcp)
 C_SRCS+=line_edit.c
 endif

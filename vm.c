@@ -6,8 +6,9 @@
 #include "common.h"
 #include "lox_compiler.h"
 #include "debug.h"
-#include "object.h"
 #include "memory.h"
+#include "object.h"
+#include "string_output.h"
 #include "vm.h"
 
 #include "native.h"
@@ -489,7 +490,7 @@ static InterpretResult run() {
       }
       case OP_PRINTLN: {
         printValue(pop());
-        printf("\n");
+        print_cstring(CRLF);
         break;
       }
       case OP_JUMP: {

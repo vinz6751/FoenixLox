@@ -3,6 +3,7 @@
 
 #include "memory.h"
 #include "object.h"
+#include "string_output.h"
 #include "table.h"
 #include "value.h"
 #include "vm.h"
@@ -193,10 +194,12 @@ bool isValidStringIndex(ObjString* str, int index) {
 
 static void printFunction(ObjFunction* function) {
   if (function->name == NULL) {
-    printf("<script>");
+    print_cstring("<script>");
     return;
   }
-  printf("<fn %s>", function->name->chars);
+  print_cstring("<fn ");
+  print_cstring(function->name->chars);
+  print_char('>');
 }
 void printObject(Value value) {
   switch (OBJ_TYPE(value)) {
@@ -204,7 +207,7 @@ void printObject(Value value) {
       printFunction(AS_BOUND_METHOD(value)->method->function);
       break;
     case OBJ_CLASS:
-      printf("%s", AS_CLASS(value)->name->chars);
+      print_cstring(AS_CLASS(value)->name->chars);
       break;
     case OBJ_CLOSURE:
       printFunction(AS_CLOSURE(value)->function);
@@ -213,34 +216,35 @@ void printObject(Value value) {
       printFunction(AS_FUNCTION(value));
       break;
     case OBJ_INSTANCE:
-      printf("%s instance",
-             AS_INSTANCE(value)->klass->name->chars);
+      print_cstring(AS_INSTANCE(value)->klass->name->chars);
+      print_cstring(" instance");
       break;
     case OBJ_NATIVE:
-      printf("<native fn>");
+      print_cstring("<native fn>");
       break;
     case OBJ_STRING:
-      printf("%s", AS_CSTRING(value));
+      print_string_obj((ObjString*)AS_OBJ(value));
       break;
     case OBJ_UPVALUE:
-      printf("upvalue");
+      print_cstring("upvalue");
       break;
     case OBJ_LIST: {
       ObjList *list = AS_LIST(value);
-      printf("[");
+      print_char('[');
       for(int i=0; i < list->count; i++) {
         Value cur = list->items[i];
-        if (i>0) printf(", ");
+        if (i>0)
+          print_cstring(", ");
         if (IS_STRING(cur)) {
-          printf("\"");
+          print_char('\"');
           printValue(cur);
-          printf("\"");
+          print_char('\"');
         } else {
           printValue(cur);
         }        
       }
-      printf("]");
+      print_char(']');
       break;
-    }      
+    }
   }
 }
