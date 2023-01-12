@@ -1,38 +1,50 @@
 FOENIX = module/Calypsi-m68k-Foenix
 
-BUILD_VER = 0.2.0 ($(shell git branch --show-current), $(shell date +"%b %d %Y %H:%M"))
+BUILD_VER = 0.3.0 ($(shell git branch --show-current), $(shell date +"%b %d %Y %H:%M"))
 
-# Select target. Valid values are mcp or emutos
-OS_TARGET=emutos
+# Select target. Valid values are mcp or tos
+OS_TARGET=tos
+TOOLCHAIN=gcc
+# Keep that to "no" as it won't work because some math functions are missing
+USE_LIBCMINI=no
 
-# GCC toolchain for EmuTOS
-ifeq ($(OS_TARGET),emutos)
-TARGET=TARGET_EMUTOS
-PREFIX=m68k-atari-mint-
-AS=$(PREFIX)as
-CC=$(PREFIX)gcc
-CFLAGS=-c -O2 -fomit-frame-pointer -std=c99 -Wall
-LD=$(PREFIX)gcc
-LDFLAGS=-lm
-STRIP=$(PREFIX)gcc
-#Tried using LIBCMINI but it lacks math functions
-#LIBCMINI=/home/vincent/Atari/Crossdev/libcmini
-#LDFLAGS=-L$(LIBCMINI)/build -lcmini -lgcc -lm
+# Select toolchain, gcc or calypsi
+# GCC toolchain for TOS
+ifeq ($(TOOLCHAIN),gcc)
+	PREFIX=m68k-atari-mint-
+	AS=$(PREFIX)as
+	CC=$(PREFIX)gcc
+	CFLAGS=-c -O2 -fomit-frame-pointer -std=c99 -Wall
+	LD=$(PREFIX)ld
+	LDFLAGS=-lm
+	STRIP=$(PREFIX)strip
+	#Tried using LIBCMINI but it lacks math functions :(
+	LIBCMINI=/mnt/c/Atari/Crossdev/libcmini
+	ifeq ($(USE_LIBCMINI),yes)
+		LDFLAGS=-L$(LIBCMINI)/build -lcmini -L/lib/gcc/m68k-atari-mint/4.6.4 -lgcc -L/usr/m68k-atari-mint/lib
+	endif
+	LDFLAGS+=-lm
+endif
+# Calypsi toolchain
+ifeq ($(TOOLCHAIN),calypsi)
+	MODEL=--code-model=large --data-model=large
+	LIB_MODEL=lc-ld
+	CORE=68000
+	FOENIX_LIB = lib/foenix-$(LIB_MODEL).a
+	AS=as68k
+	ASFLAGS=--core=$(CORE) $(MODEL) --debug --list-file=$(@:%.o=%.lst)
+	CC=cc68k
+	CFLAGS=--core=$(CORE) $(MODEL) -DA2560=1 -DUSE_DL=0 -DNO_WCHAR=1 --debug --list-file=$(@:%.o=%.lst)
+	LD=ln68k
+	LDFLAGS=--output-format=gemdos cstartup.o main.o -l --cross-reference clib-$(CORE)-$(LIB_MODEL).a
 endif
 
-# Calypsi toolchain for MCP
-ifeq ($(OS_TARGET),mcp)
-TARGET=TARGET_MCP
-MODEL=--code-model=large --data-model=large
-LIB_MODEL=lc-ld
-FOENIX_LIB = lib/foenix-$(LIB_MODEL).a
-A2560K_RULES = lib/a2560k-simplified.scm
-AS=as68k
-ASFLAGS=--core=68000 $(MODEL) --debug --list-file=$(@:%.o=%.lst)
-CC=cc68k
-CFLAGS=--core=68000 $(MODEL) -DA2560=1 -DUSE_DL=0 -DNO_WCHAR=1 --debug --list-file=$(@:%.o=%.lst)
-LD=ln68k
-LDFLAGS=$(A2560K_RULES) clib-68000-$(LIB_MODEL).a $(FOENIX_LIB) --list-file=lox.lst --cross-reference --rtattr printf=float --rtattr scanf=float --rtattr cstartup=Foenix_user --stack-size=65536 --heap-size=262144
+ifeq ($(OS_TARGET),tos)
+	TARGET=TARGET_EMUTOS
+else ifeq ($(OS_TARGET),mcp)
+	TARGET=TARGET_MCP
+	A2560K_RULES += lib/a2560k-simplified.scm
+	LDFLAGS=$(A2560K_RULES) clib-68000-$(LIB_MODEL).a $(FOENIX_LIB) --list-file=lox.lst --cross-reference --rtattr printf=float --rtattr scanf=float --rtattr cstartup=Foenix_user --stack-size=65536 --heap-size=262144
 endif
 
 # Common flags
@@ -44,7 +56,7 @@ C_SRCS = chunk.c debug.c memory.c scanner.c value.c native.c \
          compiler.c main.c object.c table.c vm.c string_output.c
 
 ifeq ($(OS_TARGET),mcp)
-C_SRCS+=line_edit.c
+	C_SRCS+=line_edit.c
 endif
 
 # Object files
@@ -52,10 +64,9 @@ OBJS = $(ASM_SRCS:%.s=obj/%.o) $(C_SRCS:%.c=obj/%.o)
 OBJS_DEBUG = $(ASM_SRCS:%.s=obj/%-debug.o) $(C_SRCS:%.c=obj/%-debug.o)
 
 ifeq ($(OS_TARGET),mcp)
-EXEC=lox.pgz lox.elf
-endif
-ifeq ($(OS_TARGET),emutos)
-EXEC=lox.tos
+	EXEC=lox.pgz lox.elf
+else ifeq ($(OS_TARGET),tos)
+	EXEC=lox.tos
 endif
 
 all: $(EXEC)
@@ -74,10 +85,12 @@ obj/%-debug.o: %.c
 
 # GCC targets
 lox.tos:  $(OBJS)
+	# With libcmini (won't work)
+	#$(LD) -o $@ -nostdlib $(LIBCMINI)/build/crt0.o $^ -s $(LDFLAGS)
+	# With MintLIB
 	$(CC) -o $@ $^ $(LDFLAGS)
-#	$(LD) -o $@ -nostdlib $(LIBCMINI)/build/crt0.o $^ -s $(LDFLAGS)
-#	$(STRIP) $@
-	cp $@ /cygdrive/c/Atari/Disques/F_Coding/$@
+	$(STRIP) $@
+	cp $@ /mnt/c/Atari/Disques/F_Coding/$@
 
 # Calypsi targets
 lox.pgz:  $(OBJS)
@@ -88,4 +101,4 @@ lox.elf:  $(OBJS)
 
 clean:
 	-$(RM) $(OBJS) $(OBJS:%.o=%.lst) $(OBJS_DEBUG) $(OBJS_DEBUG:%.o=%.lst)
-	-$(RM) $(EXEC) lox.lst 
+	-$(RM) lox.pgz lox.elf lox.tos lox.lst 
